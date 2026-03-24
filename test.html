@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubTrack — Student Budget Saver</title>
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --accent: #ff4d4d;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+
+        /* DASHBOARD CARDS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .stat-card h3 { color: #666; font-size: 0.9em; text-transform: uppercase; margin-bottom: 10px; }
+        .stat-card p { font-size: 1.8em; font-weight: bold; color: var(--primary); }
+
+        /* CALENDAR STYLES */
+        .calendar-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+
+        .day-label { font-weight: bold; color: #999; font-size: 0.8em; padding-bottom: 10px; }
+        
+        .day {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 0.9em;
+            position: relative;
+            background: #f9f9f9;
+            border: 1px solid #eee;
+        }
+
+        .day.today {
+            border: 2px solid var(--primary);
+            font-weight: bold;
+            background: #fff;
+        }
+
+        .dot-container {
+            display: flex;
+            gap: 2px;
+            margin-top: 4px;
+            height: 6px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        /* INPUT FORM */
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .input-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+
+        input, select, button {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        /* LIST TABLE */
+        .sub-list {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9f9f9; text-align: left; padding: 15px; color: #666; font-size: 0.8em; }
+        td { padding: 15px; border-top: 1px solid #eee; }
+
+        .days-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .urgent { background: #fee2e2; color: #dc2626; }
+        .warning { background: #fef3c7; color: #d97706; }
+        .safe { background: #dcfce7; color: #16a34a; }
+
+        .delete-btn { color: #ff4d4d; cursor: pointer; border: none; background: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>💸 SubTrack</h1>
+        <p>Manage your college budget and stop the "Subscription Zombies"</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Monthly Total</h3>
+            <p id="totalMonthly">$0.00</p>
+        </div>
+        <div class="stat-card">
+            <h3>Weekly Burn</h3>
+            <p id="totalWeekly">$0.00</p>
+        </div>
+        <div class="stat-card">
+            <h3>Next Bill Due</h3>
+            <p id="nextBillLabel">None</p>
+        </div>
+    </div>
+
+    <div class="calendar-card">
+        <div class="calendar-header">
+            <h2 id="currentMonthYear">Month Year</h2>
+            <div>
+                <button onclick="changeMonth(-1)">‹</button>
+                <button onclick="changeMonth(1)">›</button>
+            </div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+            </div>
+    </div>
+
+    <div class="form-card">
+        <h3>Add New Subscription</h3>
+        <div class="input-group">
+            <input type="text" id="subName" placeholder="Service Name">
+            <input type="number" id="subCost" placeholder="Cost ($)" step="0.01">
+            <select id="subFreq">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+            </select>
+            <input type="date" id="subDate" title="Last Payment Date">
+            <button onclick="addSubscription()">Add Sub</button>
+        </div>
+    </div>
+
+    <div class="sub-list">
+        <table>
+            <thead>
+                <tr>
+                    <th>NAME</th>
+                    <th>COST</th>
+                    <th>FREQUENCY</th>
+                    <th>NEXT BILL</th>
+                    <th>DAYS LEFT</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="subTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let subscriptions = JSON.parse(localStorage.getItem('mySubs')) || [];
+    let currentViewDate = new Date();
+
+    function addSubscription() {
+        const name = document.getElementById('subName').value;
+        const cost = parseFloat(document.getElementById('subCost').value);
+        const freq = document.getElementById('subFreq').value;
+        const lastDate = document.getElementById('subDate').value;
+
+        if (!name || !cost || !lastDate) return alert("Please fill all fields!");
+
+        const newSub = { id: Date.now(), name, cost, freq, lastDate };
+        subscriptions.push(newSub);
+        saveAndRefresh();
+        document.getElementById('subName').value = '';
+        document.getElementById('subCost').value = '';
+    }
+
+    function calculateNextBill(lastDateStr, freq) {
+        const lastDate = new Date(lastDateStr);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        let nextDate = new Date(lastDate);
+        while (nextDate <= today) {
+            if (freq === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+            else nextDate.setDate(nextDate.getDate() + 7);
+        }
+        return nextDate;
+    }
+
+    function changeMonth(offset) {
+        currentViewDate.setMonth(currentViewDate.getMonth() + offset);
+        render();
+    }
+
+    function deleteSub(id) {
+        subscriptions = subscriptions.filter(s => s.id !== id);
+        saveAndRefresh();
+    }
+
+    function saveAndRefresh() {
+        localStorage.setItem('mySubs', JSON.stringify(subscriptions));
+        render();
+    }
+
+    function render() {
+        renderStatsAndTable();
+        renderCalendar();
+    }
+
+    function renderStatsAndTable() {
+        const tbody = document.getElementById('subTableBody');
+        tbody.innerHTML = '';
+        let totalM = 0, totalW = 0, upcomingBills = [];
+
+        subscriptions.forEach(sub => {
+            const nextBill = calculateNextBill(sub.lastDate, sub.freq);
+            const daysLeft = Math.ceil((nextBill - new Date()) / (1000 * 60 * 60 * 24));
+            
+            if (sub.freq === 'monthly') { totalM += sub.cost; totalW += (sub.cost / 4.33); }
+            else { totalW += sub.cost; totalM += (sub.cost * 4.33); }
+            upcomingBills.push({ name: sub.name, days: daysLeft });
+
+            let badgeClass = daysLeft <= 3 ? 'urgent' : (daysLeft <= 7 ? 'warning' : 'safe');
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${sub.name}</strong></td>
+                    <td>$${sub.cost.toFixed(2)}</td>
+                    <td style="text-transform: capitalize;">${sub.freq}</td>
+                    <td>${nextBill.toLocaleDateString()}</td>
+                    <td><span class="days-badge ${badgeClass}">${daysLeft} days</span></td>
+                    <td><button class="delete-btn" onclick="deleteSub(${sub.id})">🗑️</button></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('totalMonthly').textContent = `$${totalM.toFixed(2)}`;
+        document.getElementById('totalWeekly').textContent = `$${totalW.toFixed(2)}`;
+        if (upcomingBills.length > 0) {
+            const soonest = upcomingBills.sort((a,b) => a.days - b.days)[0];
+            document.getElementById('nextBillLabel').textContent = `${soonest.name} (${soonest.days}d)`;
+        } else document.getElementById('nextBillLabel').textContent = "None";
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        const monthYearLabel = document.getElementById('currentMonthYear');
+        grid.innerHTML = '';
+
+        const year = currentViewDate.getFullYear();
+        const month = currentViewDate.getMonth();
+        monthYearLabel.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentViewDate);
+
+        // Days labels
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+            grid.innerHTML += `<div class="day-label">${day}</div>`;
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Empty spaces for first week
+        for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div></div>`;
+
+        // Create days
+        for (let d = 1; d <= daysInMonth; d++) {
+            const currentDate = new Date(year, month, d);
+            const isToday = currentDate.toDateString() === new Date().toDateString();
+            
+            // Check for dots
+            let dotsHtml = '';
+            subscriptions.forEach(sub => {
+                const nextPay = calculateNextBill(sub.lastDate, sub.freq);
+                if (nextPay.toDateString() === currentDate.toDateString()) {
+                    dotsHtml += `<div class="dot" title="${sub.name}"></div>`;
+                }
+            });
+
+            grid.innerHTML += `
+                <div class="day ${isToday ? 'today' : ''}">
+                    ${d}
+                    <div class="dot-container">${dotsHtml}</div>
+                </div>
+            `;
+        }
+    }
+
+    render();
+</script>
+
+</body>
+</html>
